@@ -1,0 +1,591 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>B-Services DZ | الاشتراكات الرقمية</title>
+    <!-- استدعاء Tailwind CSS للتصميم -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- استدعاء مكتبة الأيقونات -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;900&display=swap');
+        
+        body {
+            font-family: 'Cairo', sans-serif;
+            background-color: #0a0e17; 
+            color: #ffffff;
+            overflow-x: hidden;
+        }
+        
+        .radar-bg {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background-image: 
+                radial-gradient(circle at 50% -20%, rgba(30, 58, 138, 0.15) 0%, transparent 70%),
+                repeating-radial-gradient(circle at 50% 0%, transparent 0, transparent 40px, rgba(255,255,255,0.02) 41px, transparent 42px);
+            z-index: -1;
+            pointer-events: none;
+            transition: background-image 0.5s ease;
+        }
+
+        .bg-cardbg { background-color: rgba(15, 23, 42, 0.6); backdrop-filter: blur(12px); }
+        .border-cardborder { border-color: rgba(255, 255, 255, 0.05); }
+
+        /* Custom Scrollbar for Admin Panel */
+        .admin-scroll::-webkit-scrollbar { width: 6px; }
+        .admin-scroll::-webkit-scrollbar-track { background: #0f172a; }
+        .admin-scroll::-webkit-scrollbar-thumb { background: #334155; border-radius: 10px; }
+
+        #toast {
+            visibility: hidden;
+            min-width: 250px;
+            background-color: #10B981; 
+            color: #fff;
+            text-align: center;
+            border-radius: 12px;
+            padding: 16px;
+            position: fixed;
+            z-index: 9999;
+            left: 50%;
+            bottom: 30px;
+            transform: translateX(-50%);
+            font-size: 16px;
+            font-weight: bold;
+            box-shadow: 0 5px 20px rgba(16, 185, 129, 0.4);
+            opacity: 0;
+            transition: opacity 0.5s, bottom 0.5s;
+        }
+        #toast.show { visibility: visible; opacity: 1; bottom: 50px; }
+    </style>
+</head>
+<body class="antialiased selection:bg-blue-500 selection:text-white">
+
+    <div class="radar-bg" id="mainBg"></div>
+
+    <nav class="fixed w-full z-40 bg-[#0a0e17]/80 backdrop-blur-md border-b border-white/5">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-center md:justify-between h-20">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-blue-600 to-cyan-400 flex items-center justify-center font-black text-xl shadow-lg shadow-blue-500/30">
+                        B
+                    </div>
+                    <span class="font-black text-2xl tracking-wider">B-Services<span class="text-blue-400">.</span></span>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <div class="pt-32 pb-10 text-center px-4 relative z-10">
+        <h1 class="text-4xl md:text-6xl font-black mb-6 leading-tight">
+            أفضل الاشتراكات، <br>
+            <span class="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-cyan-300">لجميع احتياجاتك الرقمية</span>
+        </h1>
+        <p class="text-gray-400 text-lg md:text-xl max-w-2xl mx-auto mb-10">
+            اختر التطبيق، حدد الباقة اللي تناسبك، واطلبها في ثوانٍ. ضمان الجودة وسرعة التنفيذ.
+        </p>
+        
+        <div class="flex flex-wrap justify-center gap-4 max-w-3xl mx-auto" id="appSelector"></div>
+    </div>
+
+    <div class="max-w-7xl mx-auto px-4 pb-24 relative z-10">
+        <div id="pricingContainer" class="flex flex-wrap justify-center items-end gap-8 mt-12"></div>
+    </div>
+
+    <div id="toast"></div>
+
+    <!-- زر الدخول للوحة التحكم -->
+    <button onclick="openAdmin()" class="fixed bottom-4 left-4 w-12 h-12 rounded-full bg-white/5 border border-white/10 text-white/50 hover:text-white hover:bg-white/10 transition-all flex items-center justify-center z-50 shadow-lg backdrop-blur-sm">
+        <i class="fas fa-cog text-xl"></i>
+    </button>
+
+    <!-- نافذة لوحة التحكم -->
+    <div id="adminModal" class="fixed inset-0 bg-black/90 backdrop-blur-sm z-[100] hidden items-center justify-center p-4">
+        <!-- الحاوية الرئيسية -->
+        <div class="bg-[#0f172a] border border-gray-700 rounded-3xl p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto admin-scroll shadow-2xl relative">
+            <button onclick="closeAdmin()" class="absolute top-4 left-4 text-gray-400 hover:text-white transition-colors bg-gray-800 rounded-full w-8 h-8 flex items-center justify-center">
+                <i class="fas fa-times"></i>
+            </button>
+            
+            <!-- 1. قسم التحقق (Login) -->
+            <div id="authSection" class="block mt-4">
+                <div class="text-center mb-8">
+                    <div class="w-16 h-16 bg-blue-600/20 text-blue-500 rounded-full flex items-center justify-center mx-auto mb-4 text-2xl border border-blue-500/30">
+                        <i class="fas fa-lock"></i>
+                    </div>
+                    <h2 class="text-2xl font-bold text-white">لوحة تحكم B-Services</h2>
+                    <p class="text-gray-400 text-sm mt-2">الرجاء إدخال الرقم السري للمدير</p>
+                </div>
+                
+                <input type="password" id="adminPassword" class="w-full max-w-xs mx-auto block bg-[#1e293b] border border-gray-600 rounded-xl px-4 py-4 text-white text-center text-3xl tracking-[0.5em] focus:outline-none focus:border-blue-500 transition-colors" placeholder="****">
+                <p id="passwordError" class="text-red-400 text-sm mt-3 text-center hidden font-bold">الرقم السري خاطئ!</p>
+
+                <button onclick="checkPassword()" class="w-full max-w-xs mx-auto block mt-6 bg-gradient-to-r from-blue-600 to-cyan-500 hover:from-blue-500 hover:to-cyan-400 text-white font-bold py-4 rounded-xl transition-all shadow-lg shadow-blue-500/20">
+                    تسجيل الدخول
+                </button>
+            </div>
+
+            <!-- 2. قسم الإدارة (Dashboard) -->
+            <div id="settingsSection" class="hidden">
+                <h2 class="text-2xl font-bold mb-6 text-white border-b border-gray-700 pb-4">⚙️ إدارة المنصة</h2>
+                
+                <!-- إعدادات إنستغرام -->
+                <div class="bg-[#1e293b] p-4 rounded-2xl border border-gray-700 mb-6">
+                    <label class="block text-sm font-bold text-gray-300 mb-2">حساب الانستغرام (لاستقبال الطلبات)</label>
+                    <div class="flex gap-2">
+                        <input type="text" id="igInput" class="w-full bg-[#0f172a] border border-gray-600 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-blue-500 text-left" dir="ltr" placeholder="billel_services_dz">
+                        <button onclick="saveIG()" class="bg-blue-600 hover:bg-blue-500 text-white px-6 rounded-xl font-bold transition-colors">حفظ</button>
+                    </div>
+                </div>
+
+                <!-- إدارة الاشتراكات -->
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="text-xl font-bold text-white">📦 التطبيقات والاشتراكات</h3>
+                    <button onclick="openAppEditor()" class="bg-green-600 hover:bg-green-500 text-white px-4 py-2 rounded-lg font-bold text-sm flex items-center gap-2 transition-colors">
+                        <i class="fas fa-plus"></i> إضافة تطبيق
+                    </button>
+                </div>
+
+                <!-- قائمة التطبيقات هنا -->
+                <div id="adminAppsList" class="space-y-3 mb-6"></div>
+            </div>
+
+            <!-- 3. قسم إضافة/تعديل تطبيق (App Editor) -->
+            <div id="appEditorSection" class="hidden">
+                <div class="flex justify-between items-center mb-6 border-b border-gray-700 pb-4">
+                    <h2 class="text-2xl font-bold text-white" id="editorTitle">إضافة تطبيق جديد</h2>
+                    <button onclick="closeAppEditor()" class="text-gray-400 hover:text-white">رجوع <i class="fas fa-arrow-left"></i></button>
+                </div>
+
+                <input type="hidden" id="editAppId">
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                    <div>
+                        <label class="block text-sm text-gray-400 mb-1">اسم التطبيق (مثال: ChatGPT Plus)</label>
+                        <input type="text" id="editAppName" class="w-full bg-[#1e293b] border border-gray-600 rounded-xl px-4 py-2 text-white">
+                    </div>
+                    <div>
+                        <label class="block text-sm text-gray-400 mb-1">اللون الرئيسي (للتصميم والإضاءة)</label>
+                        <input type="color" id="editAppColor" class="w-full h-10 bg-[#1e293b] border border-gray-600 rounded-xl cursor-pointer" value="#10a37f">
+                    </div>
+                    <div class="md:col-span-2">
+                        <label class="block text-sm text-gray-400 mb-1">رابط صورة اللوغو (URL)</label>
+                        <input type="text" id="editAppLogo" dir="ltr" class="w-full bg-[#1e293b] border border-gray-600 rounded-xl px-4 py-2 text-white text-left" placeholder="https://example.com/logo.png">
+                        <p class="text-xs text-gray-500 mt-1">حوس في جوجل على لوغو، كليكي بليمنا، ودير Copier l'adresse de l'image.</p>
+                    </div>
+                </div>
+
+                <!-- إدارة الباقات -->
+                <div class="flex justify-between items-center mb-3">
+                    <h3 class="text-lg font-bold text-white">💳 الباقات (الأسعار)</h3>
+                    <button onclick="addPlanBlock()" class="text-blue-400 hover:text-blue-300 text-sm font-bold flex items-center gap-1">
+                        <i class="fas fa-plus-circle"></i> إضافة باقة
+                    </button>
+                </div>
+                
+                <div id="plansEditorContainer" class="space-y-4 mb-6">
+                    <!-- الباقات تتولد هنا -->
+                </div>
+
+                <button onclick="saveAppConfig()" class="w-full bg-green-600 hover:bg-green-500 text-white font-bold py-4 rounded-xl transition-all shadow-lg shadow-green-600/20">
+                    💾 حفظ التطبيق في المنصة
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // =====================================================================
+        // 💾 نظام قاعدة البيانات المحلية (Local Storage Database)
+        // =====================================================================
+        
+        let IG_USERNAME = localStorage.getItem('b_services_ig') || 'billel_services_dz'; 
+
+        // البيانات الافتراضية (تظهر أول مرة فقط إذا ماكانش كاين بيانات مخزنة)
+        const defaultData = {
+            'netflix': {
+                name: 'Netflix', 
+                icon: 'https://upload.wikimedia.org/wikipedia/commons/0/08/Netflix_2015_logo.svg',
+                color: '#E50914',
+                plans: [
+                    { title: 'أساسي', duration: 'شهر واحد', price: '750', isPopular: false, features: ['شاشة واحدة', 'جودة HD'] },
+                    { title: 'بريميوم', duration: '3 أشهر', price: '2100', isPopular: true, features: ['شاشة واحدة', 'جودة 4K UHD', 'ضمان كامل'] }
+                ]
+            },
+            'canva': {
+                name: 'Canva Pro',
+                icon: 'https://upload.wikimedia.org/wikipedia/commons/b/b8/Canva_Logo.png',
+                color: '#00C4CC',
+                plans: [
+                    { title: 'برو', duration: '12 شهر', price: '2500', isPopular: true, features: ['على إيميلك الشخصي', 'ميزات Pro كاملة'] }
+                ]
+            }
+        };
+
+        // استرجاع البيانات من الذاكرة، وإذا ماشين، نستعمل الافتراضية
+        let servicesData = JSON.parse(localStorage.getItem('b_services_data')) || defaultData;
+
+        // =====================================================================
+        // ⚙️ كود التشغيل الأساسي للموقع
+        // =====================================================================
+        
+        let currentApp = Object.keys(servicesData)[0] || null; 
+
+        function init() {
+            if (!currentApp && Object.keys(servicesData).length > 0) {
+                currentApp = Object.keys(servicesData)[0];
+            }
+            if (Object.keys(servicesData).length === 0) {
+                document.getElementById('appSelector').innerHTML = '<p class="text-gray-400">لا توجد تطبيقات حاليا. يرجى إضافتها من لوحة التحكم.</p>';
+                document.getElementById('pricingContainer').innerHTML = '';
+                return;
+            }
+            renderSelectors();
+            renderPricing(currentApp);
+        }
+
+        function hexToRgb(hex) {
+            let result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+            return result ? `${parseInt(result[1], 16)}, ${parseInt(result[2], 16)}, ${parseInt(result[3], 16)}` : '255, 255, 255';
+        }
+
+        function renderSelectors() {
+            const container = document.getElementById('appSelector');
+            container.innerHTML = '';
+            
+            Object.keys(servicesData).forEach(key => {
+                const app = servicesData[key];
+                const isActive = key === currentApp;
+                const rgbColor = hexToRgb(app.color);
+                
+                // معالجة اللوغو (سواء كان رابط أو كود HTML مباشر)
+                let iconDisplay = app.icon.includes('<img') ? app.icon : `<img src="${app.icon}" class="h-6 object-contain">`;
+
+                const btnClasses = isActive 
+                    ? `px-6 py-3 rounded-2xl flex items-center gap-3 transition-all transform scale-105 shadow-lg border` 
+                    : `px-6 py-3 rounded-2xl flex items-center gap-3 transition-all hover:bg-white/5 border border-transparent text-gray-400 hover:text-white`;
+                
+                const style = isActive 
+                    ? `background-color: rgba(${rgbColor}, 0.1); border-color: ${app.color}; color: ${app.color}; box-shadow: 0 0 20px rgba(${rgbColor}, 0.2)` 
+                    : '';
+
+                container.innerHTML += `
+                    <button onclick="changeApp('${key}')" class="${btnClasses}" style="${style}">
+                        <div class="${isActive ? '' : 'opacity-60 grayscale'} transition-all flex items-center justify-center w-8 h-8">
+                            ${iconDisplay}
+                        </div>
+                        <span class="font-bold tracking-wide whitespace-nowrap">${app.name}</span>
+                    </button>
+                `;
+            });
+        }
+
+        function changeApp(key) {
+            currentApp = key;
+            renderSelectors();
+            renderPricing(key);
+            
+            const app = servicesData[key];
+            const rgbColor = hexToRgb(app.color);
+            document.getElementById('mainBg').style.backgroundImage = `
+                radial-gradient(circle at 50% -20%, rgba(${rgbColor}, 0.15) 0%, transparent 70%),
+                repeating-radial-gradient(circle at 50% 0%, transparent 0, transparent 40px, rgba(255,255,255,0.02) 41px, transparent 42px)
+            `;
+        }
+
+        function renderPricing(key) {
+            const container = document.getElementById('pricingContainer');
+            const app = servicesData[key];
+            const rgbColor = hexToRgb(app.color);
+            container.innerHTML = '';
+
+            if(!app.plans || app.plans.length === 0) {
+                container.innerHTML = '<p class="text-gray-400 w-full text-center">لا توجد باقات مضافة لهذا التطبيق.</p>';
+                return;
+            }
+
+            app.plans.forEach((plan, index) => {
+                let featuresHTML = '';
+                if(plan.features && Array.isArray(plan.features)) {
+                    plan.features.forEach(feature => {
+                        featuresHTML += `
+                            <li class="flex items-center gap-3 text-gray-300 mb-4">
+                                <i class="fas fa-check-circle text-sm" style="color: ${app.color}"></i>
+                                <span class="font-medium">${feature}</span>
+                            </li>
+                        `;
+                    });
+                }
+
+                const isMiddle = plan.isPopular;
+                const cardClasses = isMiddle 
+                    ? `relative bg-cardbg rounded-3xl p-8 w-full max-w-[340px] border-2 transform lg:-translate-y-4 shadow-2xl z-10`
+                    : `relative bg-cardbg/80 rounded-3xl p-8 w-full max-w-[340px] border border-cardborder mt-8 lg:mt-0`;
+                const borderStyle = isMiddle ? `border-color: ${app.color}; box-shadow: 0 10px 40px rgba(${rgbColor}, 0.3);` : '';
+                const badgeHTML = isMiddle ? `<div class="absolute -top-4 left-1/2 transform -translate-x-1/2 px-4 py-1 rounded-full text-xs font-bold tracking-wider whitespace-nowrap shadow-lg" style="background-color: ${app.color}; color: #fff;">الأكثر طلباً</div>` : '';
+                const buttonStyle = isMiddle ? `background-color: ${app.color}; color: white;` : `background-color: rgba(${rgbColor}, 0.1); color: ${app.color}; border: 1px solid rgba(${rgbColor}, 0.3);`;
+                
+                const safeFeatures = plan.features ? plan.features.join('، ') : '';
+
+                const cardHTML = `
+                    <div class="${cardClasses}" style="${borderStyle}">
+                        ${badgeHTML}
+                        <div class="absolute -top-6 left-1/2 transform -translate-x-1/2 w-12 h-12 rounded-full border flex items-center justify-center bg-[#0a0e17]" style="border-color: ${isMiddle ? app.color : '#1f2937'}; box-shadow: 0 0 15px rgba(${rgbColor}, ${isMiddle ? '0.5' : '0.1'})">
+                            <span class="text-sm font-bold" style="color: ${app.color}">${index + 1}</span>
+                        </div>
+                        <div class="text-center mt-6 mb-8 border-b border-gray-800 pb-8">
+                            <h4 class="text-xs font-bold tracking-widest uppercase mb-4" style="color: ${app.color}; letter-spacing: 2px;">${plan.title}</h4>
+                            <div class="flex items-end justify-center gap-1">
+                                <span class="text-5xl font-black">${plan.price}</span>
+                                <span class="text-gray-400 mb-2 font-bold">دج</span>
+                            </div>
+                            <p class="text-gray-400 text-sm mt-2">لكل ${plan.duration}</p>
+                        </div>
+                        <ul class="mb-10 min-h-[160px]">
+                            ${featuresHTML}
+                        </ul>
+                        <button onclick="orderPlan('${app.name}', '${plan.title}', '${plan.duration}', '${plan.price}', '${safeFeatures}')" 
+                                class="w-full py-4 rounded-xl font-bold transition-all hover:scale-105 active:scale-95 flex justify-center items-center gap-2" style="${buttonStyle}">
+                            <i class="fas fa-shopping-cart"></i> اطلب الاشتراك الآن
+                        </button>
+                    </div>
+                `;
+                container.innerHTML += cardHTML;
+            });
+        }
+
+        function orderPlan(appName, planTitle, planDuration, planPrice, planFeatures) {
+            const message = `مرحباً B-Services! 👋\nراني حاب نشترك في:\n\n📱 التطبيق: ${appName}\n💎 الباقة: ${planTitle}\n⏳ المدة: ${planDuration}\n💰 السعر: ${planPrice} دج\n✨ المميزات اللي خيرتها: ${planFeatures}\n\nحبيت ندفع باش نأكد الاشتراك، ولا عندي استفسار.`;
+            const tempInput = document.createElement("textarea");
+            tempInput.value = message;
+            document.body.appendChild(tempInput);
+            tempInput.select();
+            document.execCommand("copy");
+            document.body.removeChild(tempInput);
+
+            showToast('<i class="fas fa-check-circle mr-2"></i> تم نسخ الطلب! دير "Coller" (لصق) كي يفتح الانستغرام...');
+            setTimeout(function(){ 
+                window.open(`https://ig.me/m/${IG_USERNAME}`, '_blank');
+            }, 3000);
+        }
+
+        function showToast(message, color = '#10B981') {
+            const toast = document.getElementById("toast");
+            toast.innerHTML = message;
+            toast.style.backgroundColor = color;
+            toast.className = "show";
+            setTimeout(() => { toast.className = toast.className.replace("show", ""); }, 3000);
+        }
+
+        // =====================================================================
+        // 🛠️ دوال لوحة التحكم الجديدة (CRUD System)
+        // =====================================================================
+        
+        function openAdmin() {
+            document.getElementById('adminModal').classList.remove('hidden');
+            document.getElementById('adminModal').classList.add('flex');
+            document.getElementById('authSection').classList.remove('hidden');
+            document.getElementById('settingsSection').classList.add('hidden');
+            document.getElementById('appEditorSection').classList.add('hidden');
+            document.getElementById('adminPassword').value = '';
+            document.getElementById('passwordError').classList.add('hidden');
+        }
+
+        function closeAdmin() {
+            document.getElementById('adminModal').classList.add('hidden');
+            document.getElementById('adminModal').classList.remove('flex');
+        }
+
+        function checkPassword() {
+            if (document.getElementById('adminPassword').value === "2006") {
+                document.getElementById('authSection').classList.add('hidden');
+                document.getElementById('settingsSection').classList.remove('hidden');
+                document.getElementById('igInput').value = IG_USERNAME;
+                renderAdminAppsList();
+            } else {
+                document.getElementById('passwordError').classList.remove('hidden');
+            }
+        }
+
+        function saveIG() {
+            IG_USERNAME = document.getElementById('igInput').value.trim();
+            localStorage.setItem('b_services_ig', IG_USERNAME);
+            showToast('تم حفظ حساب الانستغرام بنجاح!', '#3B82F6');
+        }
+
+        // عرض التطبيقات في لوحة التحكم
+        function renderAdminAppsList() {
+            const list = document.getElementById('adminAppsList');
+            list.innerHTML = '';
+            
+            Object.keys(servicesData).forEach(key => {
+                const app = servicesData[key];
+                list.innerHTML += `
+                    <div class="bg-[#0f172a] border border-gray-700 p-4 rounded-xl flex justify-between items-center">
+                        <div class="flex items-center gap-3">
+                            <div class="w-10 h-10 bg-white/5 rounded-lg flex items-center justify-center p-1">
+                                ${app.icon.includes('<') ? app.icon : `<img src="${app.icon}" class="w-full h-full object-contain">`}
+                            </div>
+                            <span class="font-bold text-white">${app.name}</span>
+                        </div>
+                        <div class="flex gap-2">
+                            <button onclick="openAppEditor('${key}')" class="bg-blue-600/20 text-blue-400 hover:bg-blue-600 hover:text-white px-3 py-1.5 rounded-lg text-sm transition-colors"><i class="fas fa-edit"></i> تعديل</button>
+                            <button onclick="deleteApp('${key}')" class="bg-red-600/20 text-red-400 hover:bg-red-600 hover:text-white px-3 py-1.5 rounded-lg text-sm transition-colors"><i class="fas fa-trash"></i> حذف</button>
+                        </div>
+                    </div>
+                `;
+            });
+        }
+
+        function deleteApp(key) {
+            if(confirm('هل أنت متأكد من حذف هذا التطبيق وكل باقاته؟')) {
+                delete servicesData[key];
+                saveDbAndRefresh();
+                renderAdminAppsList();
+                showToast('تم الحذف بنجاح', '#EF4444');
+            }
+        }
+
+        function openAppEditor(key = null) {
+            document.getElementById('settingsSection').classList.add('hidden');
+            document.getElementById('appEditorSection').classList.remove('hidden');
+            document.getElementById('plansEditorContainer').innerHTML = '';
+
+            if (key && servicesData[key]) {
+                // تعديل تطبيق موجود
+                document.getElementById('editorTitle').innerText = 'تعديل تطبيق: ' + servicesData[key].name;
+                document.getElementById('editAppId').value = key;
+                document.getElementById('editAppName').value = servicesData[key].name;
+                document.getElementById('editAppColor').value = servicesData[key].color;
+                
+                // تنظيف اللوغو من أكواد HTML إذا كان موجود فيها
+                let cleanLogo = servicesData[key].icon;
+                if(cleanLogo.includes('src="')) {
+                    cleanLogo = cleanLogo.split('src="')[1].split('"')[0];
+                }
+                document.getElementById('editAppLogo').value = cleanLogo;
+
+                // رسم باقات التطبيق الحالي
+                if(servicesData[key].plans) {
+                    servicesData[key].plans.forEach(plan => {
+                        addPlanBlock(plan);
+                    });
+                }
+            } else {
+                // إضافة تطبيق جديد
+                document.getElementById('editorTitle').innerText = 'إضافة تطبيق جديد';
+                document.getElementById('editAppId').value = '';
+                document.getElementById('editAppName').value = '';
+                document.getElementById('editAppColor').value = '#10B981'; // أخضر افتراضي
+                document.getElementById('editAppLogo').value = '';
+                addPlanBlock(); // إضافة باقة فارغة افتراضية
+            }
+        }
+
+        function closeAppEditor() {
+            document.getElementById('appEditorSection').classList.add('hidden');
+            document.getElementById('settingsSection').classList.remove('hidden');
+        }
+
+        // إضافة واجهة لتعبئة معلومات الباقة
+        function addPlanBlock(plan = null) {
+            const container = document.getElementById('plansEditorContainer');
+            const blockId = 'plan_' + Date.now();
+            
+            const title = plan ? plan.title : '';
+            const duration = plan ? plan.duration : '';
+            const price = plan ? plan.price : '';
+            const isPopular = plan && plan.isPopular ? 'checked' : '';
+            const features = plan && plan.features ? plan.features.join('، ') : '';
+
+            const html = `
+                <div id="${blockId}" class="plan-block bg-[#0f172a] p-4 rounded-xl border border-gray-700 relative">
+                    <button onclick="document.getElementById('${blockId}').remove()" class="absolute top-3 left-3 text-red-400 hover:text-red-500"><i class="fas fa-trash"></i></button>
+                    
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-3 pr-6">
+                        <div>
+                            <label class="block text-xs text-gray-400 mb-1">اسم الباقة (مثال: أساسي)</label>
+                            <input type="text" class="plan-title w-full bg-[#1e293b] border border-gray-600 rounded-lg px-3 py-1.5 text-sm text-white" value="${title}">
+                        </div>
+                        <div>
+                            <label class="block text-xs text-gray-400 mb-1">المدة (مثال: شهر واحد)</label>
+                            <input type="text" class="plan-duration w-full bg-[#1e293b] border border-gray-600 rounded-lg px-3 py-1.5 text-sm text-white" value="${duration}">
+                        </div>
+                        <div>
+                            <label class="block text-xs text-gray-400 mb-1">السعر (دج)</label>
+                            <input type="text" class="plan-price w-full bg-[#1e293b] border border-gray-600 rounded-lg px-3 py-1.5 text-sm text-white" value="${price}">
+                        </div>
+                        <div class="flex items-end pb-1.5">
+                            <label class="flex items-center gap-2 text-sm text-gray-300 cursor-pointer">
+                                <input type="checkbox" class="plan-popular rounded border-gray-600 bg-[#1e293b]" ${isPopular}>
+                                الأكثر طلباً؟
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <div>
+                        <label class="block text-xs text-gray-400 mb-1">المميزات (افصل بينها بفاصلة "،")</label>
+                        <input type="text" class="plan-features w-full bg-[#1e293b] border border-gray-600 rounded-lg px-3 py-1.5 text-sm text-white" placeholder="شاشة واحدة، جودة 4K، ضمان" value="${features}">
+                    </div>
+                </div>
+            `;
+            container.insertAdjacentHTML('beforeend', html);
+        }
+
+        // حفظ التطبيق بالكامل
+        function saveAppConfig() {
+            const name = document.getElementById('editAppName').value.trim();
+            const logo = document.getElementById('editAppLogo').value.trim();
+            const color = document.getElementById('editAppColor').value;
+            let id = document.getElementById('editAppId').value;
+
+            if(!name || !logo) {
+                alert('الرجاء إدخال اسم التطبيق ورابط الصورة!');
+                return;
+            }
+
+            // توليد ID إذا كان تطبيق جديد (تحويل الاسم لإنجليزي أو استعمال رقم)
+            if(!id) id = 'app_' + Date.now();
+
+            // جمع بيانات الباقات
+            const plans = [];
+            document.querySelectorAll('.plan-block').forEach(block => {
+                const fString = block.querySelector('.plan-features').value;
+                const featuresArray = fString.split(/[,،]/).map(f => f.trim()).filter(f => f !== '');
+                
+                plans.push({
+                    title: block.querySelector('.plan-title').value,
+                    duration: block.querySelector('.plan-duration').value,
+                    price: block.querySelector('.plan-price').value,
+                    isPopular: block.querySelector('.plan-popular').checked,
+                    features: featuresArray
+                });
+            });
+
+            // حفظ في قاعدة البيانات
+            servicesData[id] = {
+                name: name,
+                icon: logo, // يتم معالجتها كصورة في renderSelectors
+                color: color,
+                plans: plans
+            };
+
+            saveDbAndRefresh();
+            showToast('تم حفظ التطبيق بنجاح!', '#10B981');
+            closeAppEditor();
+            renderAdminAppsList();
+        }
+
+        function saveDbAndRefresh() {
+            localStorage.setItem('b_services_data', JSON.stringify(servicesData));
+            // إعادة تعيين التطبيق الحالي إذا تم حذفه
+            if(!servicesData[currentApp]) currentApp = Object.keys(servicesData)[0];
+            init();
+        }
+
+        // تشغيل دوال البداية
+        window.onload = init;
+    </script>
+</body>
+</html>
